@@ -8,13 +8,15 @@ from app.database import Base
 class Producto(Base):
     __tablename__ = "productos"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     nombre = Column(String, nullable=False)
-    precio_final = Column(Float)  # O Numeric(12, 2)
-    cuotas_cantidad = Column(Integer)
+    descripcion = Column(String, nullable=True)
+    imagen_url = Column(String, nullable=True)
+    precio_final = Column(Float, nullable=False)
+    cuotas_cantidad = Column(Integer, default=1)
     cuotas_valor = Column(Float)
-    garantia_meses = Column(Integer)
-    stock = Column(Integer)
+    garantia_meses = Column(Integer, default=12)
+    stock = Column(Integer, default=0)
 
     # Relación con items de pedido
     items_pedido = relationship("ItemPedido", back_populates="producto")
@@ -23,30 +25,35 @@ class Producto(Base):
 class Usuario(Base):
     __tablename__ = "usuarios"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     nombre = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     password_hash = Column(String, nullable=False)
-    rol = Column(String, default="customer")
+    rol = Column(String, default="customer", nullable=False)
 
-    # Campos de Clase 7 (Consentimiento)
-    acepto_tratamiento = Column(Boolean, nullable=False, default=True)
+    # Permisos de Administrador (compatible con SQLite 0/1)
+    is_admin = Column(Boolean, default=False, server_default="0", nullable=False)
+
+    # Campos de Consentimiento (Ley 25.326)
+    acepto_tratamiento = Column(Boolean, nullable=False, default=True, server_default="1")
+    acepta_politica_privacidad = Column(Boolean, nullable=False, default=False, server_default="0")
     fecha_consentimiento = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
-    # Campos de Clase 9 (Baja y Anonimización)
-    activo = Column(Boolean, default=True, server_default="true", nullable=False)
+    # Campos de Baja y Anonimización
+    activo = Column(Boolean, default=True, server_default="1", nullable=False)
     fecha_baja = Column(DateTime(timezone=True), nullable=True)
 
     # Relación con pedidos
     pedidos = relationship("Pedido", back_populates="usuario")
 
+
 class Pedido(Base):
     __tablename__ = "pedidos"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
     estado = Column(String, default="pendiente", nullable=False)
-    total = Column(Numeric(12, 2), nullable=False)  # Exigido en Numeric por la Clase 8
+    total = Column(Float, nullable=False)
     creado_en = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     # Relaciones (con cascade para delete-orphan)
@@ -57,11 +64,11 @@ class Pedido(Base):
 class ItemPedido(Base):
     __tablename__ = "item_pedidos"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     pedido_id = Column(Integer, ForeignKey("pedidos.id"), nullable=False)
     producto_id = Column(Integer, ForeignKey("productos.id"), nullable=False)
     cantidad = Column(Integer, nullable=False)
-    precio_unitario = Column(Numeric(12, 2), nullable=False)  # Exigido en Numeric por la Clase 8
+    precio_unitario = Column(Float, nullable=False)
 
     # Relaciones
     pedido = relationship("Pedido", back_populates="items")
@@ -71,7 +78,7 @@ class ItemPedido(Base):
 class SolicitudRevocacion(Base):
     __tablename__ = "solicitudes_revocacion"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     codigo = Column(String, unique=True, index=True, nullable=False)
     pedido_id = Column(Integer, ForeignKey("pedidos.id"), nullable=False)
     usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)

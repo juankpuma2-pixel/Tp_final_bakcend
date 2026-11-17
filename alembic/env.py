@@ -2,7 +2,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import sys
-
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
@@ -12,11 +11,13 @@ from alembic import context
 sys.path.append(".")
 
 # Importar la Base de la base de datos y los modelos
-from app.database import Base
-from app.models import Usuario, Pedido, ItemPedido, Producto
+from app.database import Base, SQLALCHEMY_DATABASE_URL
+from app.models import Usuario, Pedido, ItemPedido, Producto, SolicitudRevocacion
 
 # Configuración de Alembic desde el archivo .ini
 config = context.config
+from app.core.config import settings
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%"))
 
 # Configuración del sistema de logs
 if config.config_file_name is not None:
@@ -34,6 +35,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        render_as_batch=True,
     )
 
     with context.begin_transaction():
@@ -41,7 +43,7 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    """Ejecuta migraciones en modo 'online' (conectado a PostgreSQL)."""
+    """Ejecuta migraciones en modo 'online'."""
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
@@ -50,7 +52,9 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
+            render_as_batch=True,
         )
 
         with context.begin_transaction():

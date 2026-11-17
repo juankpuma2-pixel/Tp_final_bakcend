@@ -1,13 +1,13 @@
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    # Configuración existente (Clase 6)
+    # Configuración de Proyecto y Base de Datos (SQLite local por defecto)
     PROJECT_NAME: str = "API E-Commerce IRESM"
-    DATABASE_URL: str
-    CORS_ORIGINS: str
+    DATABASE_URL: str = "sqlite:///./tienda.db"
+    CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"
 
-    # Configuración nueva de Seguridad y JWT (Clase 7)
-    SECRET_KEY: str
+    # Configuración de Seguridad y JWT
+    SECRET_KEY: str = "clave_secreta_super_segura_para_desarrollo_iresm_2026"
     ALGORITHM: str = "HS256"
     ACCESS_MIN: int = 30
     REFRESH_MIN: int = 10080
