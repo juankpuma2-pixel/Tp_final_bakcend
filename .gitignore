@@ -49,3 +49,7 @@ Thumbs.db
 # Uploaded files
 uploads/
 
+# SQL dumps
+*.sql
+
+

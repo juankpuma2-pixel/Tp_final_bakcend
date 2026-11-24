@@ -29,7 +29,12 @@ if _config_db_url.startswith("sqlite"):
 
     SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_PATH}"
 else:
-    SQLALCHEMY_DATABASE_URL = _config_db_url
+    if _config_db_url.startswith("postgres://"):
+        SQLALCHEMY_DATABASE_URL = _config_db_url.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif _config_db_url.startswith("postgresql://") and not _config_db_url.startswith("postgresql+"):
+        SQLALCHEMY_DATABASE_URL = _config_db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    else:
+        SQLALCHEMY_DATABASE_URL = _config_db_url
     DB_PATH = None
 
 # ---------------------------------------------------------------------------
@@ -44,6 +49,8 @@ if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL,
         connect_args={"check_same_thread": False},
+        pool_pre_ping=True,
+        pool_recycle=300,
     )
 
     @event.listens_for(engine, "connect")
@@ -59,7 +66,11 @@ if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
         cursor.execute("PRAGMA foreign_keys=ON;")     # integridad referencial
         cursor.close()
 else:
-    engine = create_engine(SQLALCHEMY_DATABASE_URL)
+    engine = create_engine(
+        SQLALCHEMY_DATABASE_URL,
+        pool_pre_ping=True,
+        pool_recycle=300,
+    )
 
 # ---------------------------------------------------------------------------
 # Session factory y Base declarativa

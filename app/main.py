@@ -2,14 +2,27 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.database import Base, engine, DB_PATH, SQLALCHEMY_DATABASE_URL, get_db
 from app.core.config import settings
 from app.routers import productos, auth, pedidos, usuarios
+
+
+class StaticConCache(StaticFiles):
+    """
+    Subclase de StaticFiles que añade cabeceras Cache-Control optimizadas
+    para archivos estáticos e inmutables en producción (PWA).
+    """
+    def file_response(self, *args, **kwargs) -> Response:
+        response = super().file_response(*args, **kwargs)
+        if response.status_code == 200:
+            response.headers["Cache-Control"] = "public, max-age=2592000, immutable"
+        return response
 
 
 @asynccontextmanager
@@ -55,6 +68,9 @@ async def lifespan(app: FastAPI):
 # Instanciamos la app con el título del .env y el ciclo de vida
 app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
+# Compresión GZip para respuestas HTTP
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
 # Middleware CORS cargado dinámicamente desde .env
 app.add_middleware(
     CORSMiddleware,
@@ -90,8 +106,8 @@ app.include_router(usuarios.router)
 Path("uploads/productos").mkdir(parents=True, exist_ok=True)
 _UPLOADS_DIR = Path("uploads")
 _UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/static", StaticFiles(directory=str(_UPLOADS_DIR)), name="static")
+app.mount("/static", StaticConCache(directory=str(_UPLOADS_DIR)), name="static")
 
 _DEMO_DIR = Path("app/static/demo")
 _DEMO_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/demo", StaticFiles(directory=str(_DEMO_DIR)), name="demo")
+app.mount("/demo", StaticConCache(directory=str(_DEMO_DIR)), name="demo")
